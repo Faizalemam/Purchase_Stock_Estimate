@@ -7,9 +7,17 @@ const statusEl = document.getElementById("status");
 const grandTotalEl = document.getElementById("grandTotal");
 const codesList = document.getElementById("productCodes");
 const savedBox = document.getElementById("savedBox");
+const estimateDateEl = document.getElementById("estimateDate");
 
 function money(v){
   return `${CFG.CURRENCY || "SAR"} ${Number(v || 0).toFixed(2)}`;
+}
+function localDateISO(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
 }
 function setStatus(msg, error=false){
   statusEl.textContent = msg;
@@ -101,16 +109,14 @@ function clearAll(){
 function collectLines(){
   return [...rowsEl.children].map(tr=>({
     code:tr.querySelector(".code").value.trim(),
-    name:tr.querySelector(".name").value,
-    uom:tr.querySelector(".uom").value,
-    qty:Number(tr.querySelector(".qty").value||0),
-    cost:Number(tr.querySelector(".cost").value||0),
-    total:Number(tr.querySelector(".total").value||0)
-  })).filter(x=>x.code && x.qty>0 && x.name);
+    qty:Number(tr.querySelector(".qty").value||0)
+  })).filter(x=>x.code && x.qty>0);
 }
 async function saveEstimate(){
   if(!validApi()) return setStatus("Please configure Apps Script URL first.", true);
   const lines=collectLines();
+  const estimateDate=estimateDateEl.value;
+  if(!estimateDate) return setStatus("Please select Estimate Date.", true);
   if(!lines.length) return setStatus("Enter at least one valid Product Code and QTY.", true);
 
   document.getElementById("saveBtn").disabled=true;
@@ -118,12 +124,13 @@ async function saveEstimate(){
   try{
     const payload = new URLSearchParams();
     payload.set("action","saveEstimate");
+    payload.set("estimateDate",estimateDate);
     payload.set("lines",JSON.stringify(lines));
     const r=await fetch(CFG.API_URL,{method:"POST",body:payload});
     const data=await r.json();
     if(!data.ok) throw new Error(data.error || "Save failed");
     setStatus("Estimate saved successfully.");
-    savedBox.textContent=`Saved successfully. Reference: ${data.reference} | Grand Total: ${money(data.grandTotal)}`;
+    savedBox.textContent=`Saved successfully. Date: ${data.estimateDate} | Reference: ${data.reference} | Grand Total: ${money(data.grandTotal)}`;
     savedBox.classList.remove("hidden");
   }catch(e){
     setStatus(`Save failed: ${e.message}`, true);
@@ -138,5 +145,6 @@ document.getElementById("refreshBtn").addEventListener("click",loadProducts);
 document.getElementById("saveBtn").addEventListener("click",saveEstimate);
 document.getElementById("printBtn").addEventListener("click",()=>window.print());
 
+estimateDateEl.value = localDateISO();
 clearAll();
 loadProducts();
