@@ -4,11 +4,30 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#0f4c81" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
   <title>Purchase Stock Estimate</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="wrap">
+  <section id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <div class="login-brand">
+        <img src="logo.svg" alt="Blue Sky Est. for Beverages" />
+      </div>
+      <h1>Purchase Stock Estimate</h1>
+      <p>Authorized access only</p>
+      <form id="loginForm" autocomplete="off">
+        <label class="field login-field">
+          <span>Password</span>
+          <input id="loginPassword" type="password" autocomplete="current-password" minlength="10" required />
+        </label>
+        <button id="loginBtn" class="primary login-btn" type="submit">Sign In</button>
+      </form>
+      <div id="loginMessage" class="login-message"></div>
+    </div>
+  </section>
+
+  <main id="appShell" class="wrap hidden">
     <section class="card">
       <div class="brand-banner">
         <img src="logo.svg" alt="Blue Sky Est. for Beverages" />
@@ -19,7 +38,10 @@
           <h1>Purchase Stock Estimate</h1>
           <p>Enter Product Code and Quantity only.</p>
         </div>
-        <button id="refreshBtn" class="secondary">Refresh Products</button>
+        <div class="header-actions">
+          <button id="refreshBtn" class="secondary">Refresh Products</button>
+          <button id="logoutBtn" class="secondary">Logout</button>
+        </div>
       </div>
 
       <div class="meta-row">
@@ -29,7 +51,7 @@
         </label>
       </div>
 
-      <div class="status" id="status">Loading product master…</div>
+      <div class="status" id="status">Ready.</div>
 
       <div class="table-wrap">
         <table id="estimateTable">
