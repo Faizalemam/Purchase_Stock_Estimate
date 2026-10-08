@@ -1,0 +1,89 @@
+{
+  "source_rows_excluding_header": 315,
+  "products_exported": 315,
+  "blank_code_rows_skipped": [],
+  "duplicate_codes": [],
+  "zero_cost_count": 23,
+  "zero_cost_examples": [
+    [
+      "11036",
+      "12 OZ LID. BSC"
+    ],
+    [
+      "11040",
+      "14 OZ LID. BSC"
+    ],
+    [
+      "11039",
+      "16 OZ LID. BSC"
+    ],
+    [
+      "11035",
+      "700 U LID. BSC"
+    ],
+    [
+      "11038",
+      "7 OZ LID. BSC"
+    ],
+    [
+      "11037",
+      "9 OZ LID. BSC"
+    ],
+    [
+      "3065",
+      "A4 Paper. BSC"
+    ],
+    [
+      "FX038",
+      "Blendtec Jar. BSC"
+    ],
+    [
+      "FX056",
+      "Crepe Machine. BSC"
+    ],
+    [
+      "FX059",
+      "Date Label Machine. BSC"
+    ],
+    [
+      "11047",
+      "Date Label Roll. BSC"
+    ],
+    [
+      "FX040",
+      "Espresso Portafilter. BSC"
+    ],
+    [
+      "FX057",
+      "Floor Mixer. BSC"
+    ],
+    [
+      "3051",
+      "Inventory Paper. BSC"
+    ],
+    [
+      "FX052",
+      "Lining Deep Fridge (Company). BSC"
+    ],
+    [
+      "FX058",
+      "Nitrogen Gas Machine. BSC"
+    ],
+    [
+      "FX039",
+      "RedBull Fridge. BSC"
+    ],
+    [
+      "3005",
+      "Sauce Pump Big. BSC"
+    ],
+    [
+      "FX053",
+      "Standing Fridge (Company). BSC"
+    ],
+    [
+      "FX055",
+      "Standing Fridge (Fadeco). BSC"
+    ]
+  ]
+}

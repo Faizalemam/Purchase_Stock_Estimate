@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0f4c81" />
+  <title>Purchase Stock Estimate</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <div class="topbar">
+        <div>
+          <h1>Purchase Stock Estimate</h1>
+          <p>Enter Product Code and Quantity only.</p>
+        </div>
+        <button id="refreshBtn" class="secondary">Refresh Products</button>
+      </div>
+
+      <div class="status" id="status">Loading product master…</div>
+
+      <div class="table-wrap">
+        <table id="estimateTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Code</th>
+              <th>Product Name</th>
+              <th>UOM</th>
+              <th>QTY</th>
+              <th>Cost</th>
+              <th>Total Amount</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+
+      <div class="actions">
+        <button id="addRowBtn" class="secondary">+ Add Row</button>
+        <button id="clearBtn" class="secondary">Clear</button>
+      </div>
+
+      <div class="summary">
+        <span>Grand Total</span>
+        <strong id="grandTotal">SAR 0.00</strong>
+      </div>
+
+      <div class="actions right">
+        <button id="printBtn" class="secondary">Print</button>
+        <button id="saveBtn" class="primary">Save Estimate</button>
+      </div>
+
+      <div id="savedBox" class="saved hidden"></div>
+    </section>
+  </main>
+
+  <datalist id="productCodes"></datalist>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
