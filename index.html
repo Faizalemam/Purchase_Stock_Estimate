@@ -11,9 +11,7 @@
 <body>
   <section id="loginScreen" class="login-screen">
     <div class="login-card">
-      <div class="login-brand">
-        <img src="logo.svg" alt="Blue Sky Est. for Beverages" />
-      </div>
+      <div class="login-brand"><img src="logo.svg" alt="Blue Sky Est. for Beverages" /></div>
       <h1>Purchase Stock Estimate</h1>
       <p>Authorized access only</p>
       <form id="loginForm" autocomplete="off">
@@ -29,19 +27,26 @@
 
   <main id="appShell" class="wrap hidden">
     <section class="card">
-      <div class="brand-banner">
-        <img src="logo.svg" alt="Blue Sky Est. for Beverages" />
-      </div>
+      <div class="brand-banner"><img src="logo.svg" alt="Blue Sky Est. for Beverages" /></div>
 
       <div class="topbar">
         <div>
           <h1>Purchase Stock Estimate</h1>
-          <p>Enter Product Code and Quantity only.</p>
+          <p id="pageSubtitle">Enter Product Code and Quantity only.</p>
         </div>
         <div class="header-actions">
+          <button id="historyBtn" class="secondary">Order History</button>
           <button id="refreshBtn" class="secondary">Refresh Products</button>
           <button id="logoutBtn" class="secondary">Logout</button>
         </div>
+      </div>
+
+      <div id="historyNotice" class="history-notice hidden">
+        <div>
+          <strong>Historical Estimate</strong>
+          <span id="historyNoticeText"></span>
+        </div>
+        <button id="newEstimateBtn" class="secondary">New Estimate</button>
       </div>
 
       <div class="meta-row">
@@ -57,21 +62,14 @@
         <table id="estimateTable">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Code</th>
-              <th>Product Name</th>
-              <th>UOM</th>
-              <th>QTY</th>
-              <th>Cost</th>
-              <th>Total Amount</th>
-              <th></th>
+              <th>#</th><th>Code</th><th>Product Name</th><th>UOM</th><th>QTY</th><th>Cost</th><th>Total Amount</th><th></th>
             </tr>
           </thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
 
-      <div class="actions">
+      <div id="editActions" class="actions">
         <button id="addRowBtn" class="secondary">+ Add Row</button>
         <button id="clearBtn" class="secondary">Clear</button>
       </div>
@@ -82,13 +80,35 @@
       </div>
 
       <div class="actions right">
-        <button id="printBtn" class="secondary">Print</button>
+        <button id="printBtn" class="secondary">Print / PDF</button>
         <button id="saveBtn" class="primary">Save Estimate</button>
       </div>
 
       <div id="savedBox" class="saved hidden"></div>
     </section>
   </main>
+
+  <section id="historyModal" class="modal hidden" aria-modal="true" role="dialog">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div><h2>Order History</h2><p>Open any old estimate and print it again.</p></div>
+        <button id="closeHistoryBtn" class="secondary modal-close">×</button>
+      </div>
+      <div class="history-filters">
+        <label class="field"><span>Date</span><input id="historyDate" type="date" /></label>
+        <label class="field history-ref-field"><span>Reference</span><input id="historyReference" type="text" placeholder="EST-..." /></label>
+        <button id="historySearchBtn" class="primary">Search</button>
+        <button id="historyResetBtn" class="secondary">Reset</button>
+      </div>
+      <div id="historyStatus" class="status">Ready.</div>
+      <div class="table-wrap history-table-wrap">
+        <table class="history-table">
+          <thead><tr><th>Date</th><th>Reference</th><th>Saved At</th><th>Lines</th><th>Grand Total</th><th></th></tr></thead>
+          <tbody id="historyRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 
   <datalist id="productCodes"></datalist>
   <script src="config.js"></script>
