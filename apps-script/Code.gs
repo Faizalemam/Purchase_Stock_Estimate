@@ -1,6 +1,45 @@
 const PRODUCT_SHEET = 'ProductMaster';
 const ESTIMATE_SHEET = 'Estimates';
 
+const PRODUCT_CSV_URL = 'https://raw.githubusercontent.com/Faizalemam/Purchase_Stock_Estimate/main/ProductMaster.csv';
+
+function setupProject() {
+  setupSheets();
+  importProductsFromGitHub();
+  return 'Setup complete';
+}
+
+function importProductsFromGitHub() {
+  const ss = SpreadsheetApp.getActive();
+  let sh = ss.getSheetByName(PRODUCT_SHEET);
+  if (!sh) sh = ss.insertSheet(PRODUCT_SHEET);
+
+  const response = UrlFetchApp.fetch(PRODUCT_CSV_URL, {muteHttpExceptions: true});
+  if (response.getResponseCode() !== 200) {
+    throw new Error('Unable to download ProductMaster.csv from GitHub. HTTP ' + response.getResponseCode());
+  }
+
+  const rows = Utilities.parseCsv(response.getContentText('UTF-8'));
+  if (!rows || rows.length < 2) throw new Error('ProductMaster.csv is empty or invalid.');
+
+  sh.clearContents();
+  sh.getRange(1, 1, rows.length, 4).setValues(rows.map(r => [
+    String(r[0] || '').trim(),
+    String(r[1] || '').trim(),
+    String(r[2] || '').trim(),
+    r[0] === 'Code' ? 'Cost' : Number(r[3] || 0)
+  ]));
+  sh.getRange('A1:D1').setFontWeight('bold').setBackground('#e5e7eb').setFontColor('#111827');
+  sh.setFrozenRows(1);
+  sh.setColumnWidth(1, 120);
+  sh.setColumnWidth(2, 300);
+  sh.setColumnWidth(3, 100);
+  sh.setColumnWidth(4, 110);
+  if (rows.length > 1) sh.getRange(2, 4, rows.length - 1, 1).setNumberFormat('#,##0.00');
+
+  return {ok:true, products: rows.length - 1};
+}
+
 function doGet(e) {
   try {
     const action = String((e && e.parameter && e.parameter.action) || 'products');
