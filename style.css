@@ -5,6 +5,9 @@ body{margin:0}
 .card{background:white;border-radius:18px;box-shadow:0 8px 30px rgba(20,50,80,.09);padding:22px}
 .topbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
 h1{margin:0 0 6px;font-size:26px}p{margin:0;color:#65758b}
+.meta-row{display:flex;gap:12px;align-items:end;margin:16px 0 0}
+.field{display:flex;flex-direction:column;gap:6px;min-width:220px}
+.field span{font-size:13px;font-weight:700;color:#40546b}
 .status{margin:16px 0;padding:10px 12px;border-radius:10px;background:#eef6ff;color:#0f4c81;font-size:14px}
 .status.error{background:#fff0f0;color:#a52121}
 .table-wrap{overflow:auto;border:1px solid #e3e9f0;border-radius:12px}
@@ -29,6 +32,8 @@ button{border:0;border-radius:10px;padding:10px 16px;font-weight:700;cursor:poin
   .wrap{margin:0;padding:0}
   .card{border-radius:0;min-height:100vh;padding:14px}
   .topbar{flex-direction:column}
+  .meta-row{display:block}
+  .field{min-width:0}
   h1{font-size:22px}
   .summary{max-width:none}
   button{flex:1}
