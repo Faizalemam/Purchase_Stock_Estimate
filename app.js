@@ -109,8 +109,12 @@ function clearAll(){
 function collectLines(){
   return [...rowsEl.children].map(tr=>({
     code:tr.querySelector(".code").value.trim(),
-    qty:Number(tr.querySelector(".qty").value||0)
-  })).filter(x=>x.code && x.qty>0);
+    name:tr.querySelector(".name").value,
+    uom:tr.querySelector(".uom").value,
+    qty:Number(tr.querySelector(".qty").value||0),
+    cost:Number(tr.querySelector(".cost").value||0),
+    total:Number(tr.querySelector(".total").value||0)
+  })).filter(x=>x.code && x.qty>0 && x.name);
 }
 async function saveEstimate(){
   if(!validApi()) return setStatus("Please configure Apps Script URL first.", true);
@@ -130,7 +134,8 @@ async function saveEstimate(){
     const data=await r.json();
     if(!data.ok) throw new Error(data.error || "Save failed");
     setStatus("Estimate saved successfully.");
-    savedBox.textContent=`Saved successfully. Date: ${data.estimateDate} | Reference: ${data.reference} | Grand Total: ${money(data.grandTotal)}`;
+    const savedDate = data.estimateDate || estimateDate;
+    savedBox.textContent=`Saved successfully. Date: ${savedDate} | Reference: ${data.reference} | Grand Total: ${money(data.grandTotal)}`;
     savedBox.classList.remove("hidden");
   }catch(e){
     setStatus(`Save failed: ${e.message}`, true);
