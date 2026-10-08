@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0f4c81" />
   <meta name="robots" content="noindex,nofollow,noarchive" />
   <title>Purchase Stock Estimate</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20261008-2" />
 </head>
 <body>
   <section id="loginScreen" class="login-screen">
@@ -35,9 +35,9 @@
           <p id="pageSubtitle">Enter Product Code and Quantity only.</p>
         </div>
         <div class="header-actions">
-          <button id="historyBtn" class="secondary">Order History</button>
-          <button id="refreshBtn" class="secondary">Refresh Products</button>
-          <button id="logoutBtn" class="secondary">Logout</button>
+          <button id="historyBtn" type="button" class="secondary">Order History</button>
+          <button id="refreshBtn" type="button" class="secondary">Refresh Products</button>
+          <button id="logoutBtn" type="button" class="secondary">Logout</button>
         </div>
       </div>
 
@@ -46,7 +46,7 @@
           <strong>Historical Estimate</strong>
           <span id="historyNoticeText"></span>
         </div>
-        <button id="newEstimateBtn" class="secondary">New Estimate</button>
+        <button id="newEstimateBtn" type="button" class="secondary">New Estimate</button>
       </div>
 
       <div class="meta-row">
@@ -70,8 +70,8 @@
       </div>
 
       <div id="editActions" class="actions">
-        <button id="addRowBtn" class="secondary">+ Add Row</button>
-        <button id="clearBtn" class="secondary">Clear</button>
+        <button id="addRowBtn" type="button" class="secondary">+ Add Row</button>
+        <button id="clearBtn" type="button" class="secondary">Clear</button>
       </div>
 
       <div class="summary">
@@ -80,8 +80,8 @@
       </div>
 
       <div class="actions right">
-        <button id="printBtn" class="secondary">Print / PDF</button>
-        <button id="saveBtn" class="primary">Save Estimate</button>
+        <button id="printBtn" type="button" class="secondary">Print / PDF</button>
+        <button id="saveBtn" type="button" class="primary">Save Estimate</button>
       </div>
 
       <div id="savedBox" class="saved hidden"></div>
@@ -92,13 +92,13 @@
     <div class="modal-card">
       <div class="modal-head">
         <div><h2>Order History</h2><p>Open any old estimate and print it again.</p></div>
-        <button id="closeHistoryBtn" class="secondary modal-close">×</button>
+        <button id="closeHistoryBtn" type="button" class="secondary modal-close">×</button>
       </div>
       <div class="history-filters">
         <label class="field"><span>Date</span><input id="historyDate" type="date" /></label>
         <label class="field history-ref-field"><span>Reference</span><input id="historyReference" type="text" placeholder="EST-..." /></label>
-        <button id="historySearchBtn" class="primary">Search</button>
-        <button id="historyResetBtn" class="secondary">Reset</button>
+        <button id="historySearchBtn" type="button" class="primary">Search</button>
+        <button id="historyResetBtn" type="button" class="secondary">Reset</button>
       </div>
       <div id="historyStatus" class="status">Ready.</div>
       <div class="table-wrap history-table-wrap">
@@ -111,7 +111,7 @@
   </section>
 
   <datalist id="productCodes"></datalist>
-  <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script src="config.js?v=20261008-2"></script>
+  <script src="app.js?v=20261008-2"></script>
 </body>
 </html>
