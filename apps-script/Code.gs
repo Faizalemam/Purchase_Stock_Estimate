@@ -4,6 +4,19 @@ const ORDERS_SHEET = 'Orders';
 
 const PRODUCT_CSV_URL = 'https://raw.githubusercontent.com/Faizalemam/Purchase_Stock_Estimate/main/ProductMaster.csv';
 
+const UOM_OVERRIDES = {
+  '8001': 'CRT × 24 PCS',
+  '8003': 'CRT × 24 PCS',
+  '8002': 'CRT × 30 PCS',
+  '8020': 'CRT × 28 PCS',
+  '8004': 'CRT × 24 PCS'
+};
+
+function applyUomOverride_(code, uom) {
+  const key = String(code || '').trim().toUpperCase();
+  return UOM_OVERRIDES[key] || String(uom || '').trim();
+}
+
 function setupProject() {
   setupSheets();
   importProductsFromGitHub();
@@ -24,17 +37,17 @@ function importProductsFromGitHub() {
   if (!rows || rows.length < 2) throw new Error('ProductMaster.csv is empty or invalid.');
 
   sh.clearContents();
-  sh.getRange(1, 1, rows.length, 4).setValues(rows.map(r => [
+  sh.getRange(1, 1, rows.length, 4).setValues(rows.map((r, i) => [
     String(r[0] || '').trim(),
     String(r[1] || '').trim(),
-    String(r[2] || '').trim(),
-    r[0] === 'Code' ? 'Cost' : Number(r[3] || 0)
+    i === 0 ? 'UOM' : applyUomOverride_(r[0], r[2]),
+    i === 0 ? 'Cost' : Number(r[3] || 0)
   ]));
   sh.getRange('A1:D1').setFontWeight('bold').setBackground('#e5e7eb').setFontColor('#111827');
   sh.setFrozenRows(1);
   sh.setColumnWidth(1, 120);
   sh.setColumnWidth(2, 300);
-  sh.setColumnWidth(3, 100);
+  sh.setColumnWidth(3, 140);
   sh.setColumnWidth(4, 110);
   if (rows.length > 1) sh.getRange(2, 4, rows.length - 1, 1).setNumberFormat('#,##0.00');
 
@@ -79,7 +92,7 @@ function getProducts_() {
     .map(r => ({
       code: String(r[0]).trim(),
       name: String(r[1] || '').trim(),
-      uom: String(r[2] || '').trim(),
+      uom: applyUomOverride_(r[0], r[2]),
       cost: Number(r[3] || 0)
     }));
 
@@ -103,7 +116,7 @@ function getProductMap_() {
       row: i + 2,
       code: String(r[0] || '').trim(),
       name: String(r[1] || '').trim(),
-      uom: String(r[2] || '').trim(),
+      uom: applyUomOverride_(r[0], r[2]),
       cost: Number(r[3] || 0)
     };
   });
@@ -172,6 +185,11 @@ function saveEstimate_(lines, estimateDate) {
   try {
     masterUpdates.forEach(u => {
       productSh.getRange(u.row, 4).setValue(u.cost).setNumberFormat('#,##0.00');
+    });
+
+    Object.keys(UOM_OVERRIDES).forEach(code => {
+      const p = productMap[code];
+      if (p) productSh.getRange(p.row, 3).setValue(UOM_OVERRIDES[code]);
     });
 
     detailSh.getRange(detailSh.getLastRow()+1,1,rows.length,10).setValues(rows);
