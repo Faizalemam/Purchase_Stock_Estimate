@@ -246,6 +246,34 @@ function collectLines(){
   })).filter(x=>x.code && x.qty>0 && x.name && x.cost>=0);
 }
 
+function preparePrint(){
+  let printedIndex = 0;
+  [...rowsEl.children].forEach(tr=>{
+    const code = tr.querySelector('.code').value.trim();
+    const name = tr.querySelector('.name').value.trim();
+    const qty = Number(tr.querySelector('.qty').value || 0);
+    const valid = Boolean(code && name && qty > 0);
+    tr.classList.toggle('print-hide', !valid);
+    if(valid){
+      printedIndex++;
+      tr.querySelector('.idx').textContent = printedIndex;
+    }
+  });
+}
+
+function cleanupPrint(){
+  [...rowsEl.children].forEach(tr=>tr.classList.remove('print-hide'));
+  renumber();
+}
+
+function printEstimate(){
+  if(!collectLines().length){
+    setStatus('Enter at least one valid Product Code and QTY before printing.', true);
+    return;
+  }
+  window.print();
+}
+
 async function saveEstimate(){
   if(!validApi()) return setStatus('Backend is not configured.', true);
   if(!authToken) return showLogin();
@@ -275,7 +303,6 @@ async function saveEstimate(){
     savedBox.textContent = `Saved successfully. Date: ${savedDate} | Reference: ${data.reference} | Grand Total: ${money(data.grandTotal)}`;
     savedBox.classList.remove('hidden');
 
-    // Reload so any manually updated master costs appear immediately.
     await loadProducts();
   }catch(e){
     if(authError(e.message)) return showLogin('Session expired. Please sign in again.');
@@ -295,7 +322,10 @@ document.getElementById('clearBtn').addEventListener('click',clearAll);
 document.getElementById('refreshBtn').addEventListener('click',loadProducts);
 document.getElementById('logoutBtn').addEventListener('click',logout);
 document.getElementById('saveBtn').addEventListener('click',saveEstimate);
-document.getElementById('printBtn').addEventListener('click',()=>window.print());
+document.getElementById('printBtn').addEventListener('click',printEstimate);
+
+window.addEventListener('beforeprint', preparePrint);
+window.addEventListener('afterprint', cleanupPrint);
 
 estimateDateEl.value = localDateISO();
 
