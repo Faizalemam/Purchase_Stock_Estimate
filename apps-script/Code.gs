@@ -96,10 +96,11 @@ function getProductMap_() {
 
   const values = sh.getRange(2,1,last-1,4).getValues();
   const map = {};
-  values.forEach(r => {
+  values.forEach((r, i) => {
     const code = String(r[0] || '').trim().toUpperCase();
     if (!code) return;
     map[code] = {
+      row: i + 2,
       code: String(r[0] || '').trim(),
       name: String(r[1] || '').trim(),
       uom: String(r[2] || '').trim(),
@@ -118,12 +119,14 @@ function saveEstimate_(lines, estimateDate) {
 
   const detailSh = ss.getSheetByName(ESTIMATE_SHEET);
   const orderSh = ss.getSheetByName(ORDERS_SHEET);
+  const productSh = ss.getSheetByName(PRODUCT_SHEET);
   const productMap = getProductMap_();
 
   const tz = Session.getScriptTimeZone() || 'Asia/Riyadh';
   const now = new Date();
   const reference = 'EST-' + Utilities.formatDate(now, tz, 'yyyyMMdd-HHmmss');
   const rows = [];
+  const masterUpdates = [];
   let grandTotal = 0;
   let validLines = 0;
 
@@ -138,6 +141,12 @@ function saveEstimate_(lines, estimateDate) {
     const enteredCost = Number(x.cost);
     const cost = Number.isFinite(enteredCost) && enteredCost >= 0 ? enteredCost : p.cost;
     const total = qty * cost;
+
+    if (Math.abs(cost - p.cost) > 0.000001) {
+      masterUpdates.push({row: p.row, cost: cost});
+      p.cost = cost;
+    }
+
     grandTotal += total;
     validLines++;
 
@@ -161,6 +170,10 @@ function saveEstimate_(lines, estimateDate) {
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
+    masterUpdates.forEach(u => {
+      productSh.getRange(u.row, 4).setValue(u.cost).setNumberFormat('#,##0.00');
+    });
+
     detailSh.getRange(detailSh.getLastRow()+1,1,rows.length,10).setValues(rows);
     orderSh.appendRow([
       reference,
@@ -173,7 +186,14 @@ function saveEstimate_(lines, estimateDate) {
     lock.releaseLock();
   }
 
-  return {ok:true,reference,estimateDate,grandTotal,lines:validLines};
+  return {
+    ok:true,
+    reference,
+    estimateDate,
+    grandTotal,
+    lines:validLines,
+    masterCostsUpdated:masterUpdates.length
+  };
 }
 
 function ensureHistorySheets_() {
