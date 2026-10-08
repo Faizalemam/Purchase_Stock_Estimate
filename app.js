@@ -44,7 +44,7 @@ async function loadProducts(){
       o.label=p.name;
       codesList.appendChild(o);
     });
-    setStatus(`${data.products.length} products loaded from Google Sheet.`);
+    setStatus(`${data.products.length} products loaded from Google Sheet. Cost can be edited manually if supplier rate is different.`);
     recalcAll();
   }catch(e){
     setStatus(`Product load failed: ${e.message}`, true);
@@ -54,21 +54,28 @@ function addRow(prefill={}){
   const id=++rowId;
   const tr=document.createElement("tr");
   tr.dataset.id=id;
+  tr.dataset.lastCode="";
   tr.innerHTML=`
     <td class="idx"></td>
     <td><input class="code" list="productCodes" autocomplete="off" placeholder="Code" value="${prefill.code||""}"></td>
     <td><input class="name readonly" readonly></td>
     <td><input class="uom readonly" readonly></td>
     <td><input class="qty" inputmode="decimal" type="number" min="0" step="0.001" placeholder="0"></td>
-    <td><input class="cost readonly num" readonly></td>
+    <td><input class="cost num manual-cost" inputmode="decimal" type="number" min="0" step="0.01" placeholder="0.00" title="Auto-filled from Product Master. You can edit this supplier cost manually."></td>
     <td><input class="total readonly num" readonly></td>
     <td class="remove-col"><button class="danger remove" title="Remove">×</button></td>`;
   rowsEl.appendChild(tr);
 
-  const code=tr.querySelector(".code"), qty=tr.querySelector(".qty");
+  const code=tr.querySelector(".code");
+  const qty=tr.querySelector(".qty");
+  const cost=tr.querySelector(".cost");
   code.addEventListener("input",()=>hydrateRow(tr));
   code.addEventListener("change",()=>hydrateRow(tr));
   qty.addEventListener("input",()=>recalcRow(tr));
+  cost.addEventListener("input",()=>{
+    tr.dataset.costOverridden="1";
+    recalcRow(tr);
+  });
   tr.querySelector(".remove").addEventListener("click",()=>{
     tr.remove(); renumber(); calcGrand();
     if(!rowsEl.children.length) addRow();
@@ -79,10 +86,19 @@ function addRow(prefill={}){
 function hydrateRow(tr){
   const key=tr.querySelector(".code").value.trim().toUpperCase();
   const p=products.get(key);
+  const codeChanged = tr.dataset.lastCode !== key;
   tr.querySelector(".code").value=key;
   tr.querySelector(".name").value=p?.name || "";
   tr.querySelector(".uom").value=p?.uom || "";
-  tr.querySelector(".cost").value=p ? Number(p.cost||0).toFixed(2) : "";
+
+  if(codeChanged){
+    tr.dataset.costOverridden="0";
+    tr.querySelector(".cost").value=p ? Number(p.cost||0).toFixed(2) : "";
+    tr.dataset.lastCode=key;
+  } else if(!tr.dataset.costOverridden && p){
+    tr.querySelector(".cost").value=Number(p.cost||0).toFixed(2);
+  }
+
   recalcRow(tr);
 }
 function recalcRow(tr){
@@ -114,7 +130,7 @@ function collectLines(){
     qty:Number(tr.querySelector(".qty").value||0),
     cost:Number(tr.querySelector(".cost").value||0),
     total:Number(tr.querySelector(".total").value||0)
-  })).filter(x=>x.code && x.qty>0 && x.name);
+  })).filter(x=>x.code && x.qty>0 && x.name && x.cost>=0);
 }
 async function saveEstimate(){
   if(!validApi()) return setStatus("Please configure Apps Script URL first.", true);
