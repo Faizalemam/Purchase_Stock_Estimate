@@ -1,5 +1,6 @@
 const PRODUCT_SHEET = 'ProductMaster';
 const ESTIMATE_SHEET = 'Estimates';
+const ORDERS_SHEET = 'Orders';
 
 const PRODUCT_CSV_URL = 'https://raw.githubusercontent.com/Faizalemam/Purchase_Stock_Estimate/main/ProductMaster.csv';
 
@@ -55,7 +56,8 @@ function doPost(e) {
     const action = String((e && e.parameter && e.parameter.action) || '');
     if (action === 'saveEstimate') {
       const lines = JSON.parse(e.parameter.lines || '[]');
-      return json_(saveEstimate_(lines));
+      const estimateDate = String(e.parameter.estimateDate || '').trim();
+      return json_(saveEstimate_(lines, estimateDate));
     }
     return json_({ok:false,error:'Unknown action'});
   } catch (err) {
@@ -84,52 +86,119 @@ function getProducts_() {
   return {ok:true, products};
 }
 
-function saveEstimate_(lines) {
+function getProductMap_() {
+  const ss = SpreadsheetApp.getActive();
+  const sh = ss.getSheetByName(PRODUCT_SHEET);
+  if (!sh) throw new Error(`Missing sheet: ${PRODUCT_SHEET}`);
+
+  const last = sh.getLastRow();
+  if (last < 2) throw new Error('Product master is empty.');
+
+  const values = sh.getRange(2,1,last-1,4).getValues();
+  const map = {};
+  values.forEach(r => {
+    const code = String(r[0] || '').trim().toUpperCase();
+    if (!code) return;
+    map[code] = {
+      code: String(r[0] || '').trim(),
+      name: String(r[1] || '').trim(),
+      uom: String(r[2] || '').trim(),
+      cost: Number(r[3] || 0)
+    };
+  });
+  return map;
+}
+
+function saveEstimate_(lines, estimateDate) {
   if (!Array.isArray(lines) || !lines.length) throw new Error('No estimate lines received.');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(estimateDate)) throw new Error('Invalid Estimate Date.');
 
   const ss = SpreadsheetApp.getActive();
-  let sh = ss.getSheetByName(ESTIMATE_SHEET);
-  if (!sh) {
-    sh = ss.insertSheet(ESTIMATE_SHEET);
-    sh.appendRow(['Reference','Timestamp','Code','Product Name','UOM','QTY','Cost','Total Amount']);
-    sh.setFrozenRows(1);
-  }
+  ensureHistorySheets_();
+
+  const detailSh = ss.getSheetByName(ESTIMATE_SHEET);
+  const orderSh = ss.getSheetByName(ORDERS_SHEET);
+  const productMap = getProductMap_();
 
   const tz = Session.getScriptTimeZone() || 'Asia/Riyadh';
   const now = new Date();
   const reference = 'EST-' + Utilities.formatDate(now, tz, 'yyyyMMdd-HHmmss');
   const rows = [];
   let grandTotal = 0;
+  let validLines = 0;
 
   lines.forEach(x => {
+    const codeKey = String(x.code || '').trim().toUpperCase();
     const qty = Number(x.qty || 0);
-    const cost = Number(x.cost || 0);
-    const total = qty * cost;
-    if (!x.code || qty <= 0) return;
+    if (!codeKey || qty <= 0) return;
+
+    const p = productMap[codeKey];
+    if (!p) throw new Error('Unknown Product Code: ' + codeKey);
+
+    const total = qty * p.cost;
     grandTotal += total;
+    validLines++;
+
     rows.push([
       reference,
       now,
-      String(x.code),
-      String(x.name || ''),
-      String(x.uom || ''),
+      p.code,
+      p.name,
+      p.uom,
       qty,
-      cost,
-      total
+      p.cost,
+      total,
+      estimateDate,
+      0
     ]);
   });
 
   if (!rows.length) throw new Error('No valid lines to save.');
+  rows.forEach(r => r[9] = grandTotal);
 
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
-    sh.getRange(sh.getLastRow()+1,1,rows.length,8).setValues(rows);
+    detailSh.getRange(detailSh.getLastRow()+1,1,rows.length,10).setValues(rows);
+    orderSh.appendRow([
+      reference,
+      estimateDate,
+      now,
+      validLines,
+      grandTotal
+    ]);
   } finally {
     lock.releaseLock();
   }
 
-  return {ok:true,reference,grandTotal};
+  return {ok:true,reference,estimateDate,grandTotal,lines:validLines};
+}
+
+function ensureHistorySheets_() {
+  const ss = SpreadsheetApp.getActive();
+
+  let e = ss.getSheetByName(ESTIMATE_SHEET);
+  if (!e) e = ss.insertSheet(ESTIMATE_SHEET);
+  if (e.getLastRow() === 0) {
+    e.getRange('A1:J1').setValues([[
+      'Reference','Saved At','Code','Product Name','UOM','QTY','Cost','Line Total','Estimate Date','Order Grand Total'
+    ]]);
+  } else {
+    e.getRange('A1:J1').setValues([[
+      'Reference','Saved At','Code','Product Name','UOM','QTY','Cost','Line Total','Estimate Date','Order Grand Total'
+    ]]);
+  }
+  e.getRange('A1:J1').setFontWeight('bold').setBackground('#e5e7eb').setFontColor('#111827');
+  e.setFrozenRows(1);
+  e.getRange('G:H').setNumberFormat('#,##0.00');
+  e.getRange('J:J').setNumberFormat('#,##0.00');
+
+  let o = ss.getSheetByName(ORDERS_SHEET);
+  if (!o) o = ss.insertSheet(ORDERS_SHEET);
+  o.getRange('A1:E1').setValues([['Reference','Estimate Date','Saved At','Lines','Grand Total']]);
+  o.getRange('A1:E1').setFontWeight('bold').setBackground('#e5e7eb').setFontColor('#111827');
+  o.setFrozenRows(1);
+  o.getRange('E:E').setNumberFormat('#,##0.00');
 }
 
 function setupSheets() {
@@ -139,19 +208,14 @@ function setupSheets() {
   if (!p) p = ss.insertSheet(PRODUCT_SHEET);
   if (p.getLastRow() === 0) {
     p.getRange('A1:D1').setValues([['Code','Product Name','UOM','Cost']]);
-    p.getRange('A1:D1').setFontWeight('bold').setBackground('#0f4c81').setFontColor('#ffffff');
+    p.getRange('A1:D1').setFontWeight('bold').setBackground('#e5e7eb').setFontColor('#111827');
     p.setFrozenRows(1);
     p.setColumnWidths(1,4,150);
   }
 
-  let e = ss.getSheetByName(ESTIMATE_SHEET);
-  if (!e) e = ss.insertSheet(ESTIMATE_SHEET);
-  if (e.getLastRow() === 0) {
-    e.getRange('A1:H1').setValues([['Reference','Timestamp','Code','Product Name','UOM','QTY','Cost','Total Amount']]);
-    e.getRange('A1:H1').setFontWeight('bold').setBackground('#0f4c81').setFontColor('#ffffff');
-    e.setFrozenRows(1);
-  }
+  ensureHistorySheets_();
 }
+
 function json_(obj){
   return ContentService
     .createTextOutput(JSON.stringify(obj))
