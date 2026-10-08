@@ -135,7 +135,9 @@ function saveEstimate_(lines, estimateDate) {
     const p = productMap[codeKey];
     if (!p) throw new Error('Unknown Product Code: ' + codeKey);
 
-    const total = qty * p.cost;
+    const enteredCost = Number(x.cost);
+    const cost = Number.isFinite(enteredCost) && enteredCost >= 0 ? enteredCost : p.cost;
+    const total = qty * cost;
     grandTotal += total;
     validLines++;
 
@@ -146,7 +148,7 @@ function saveEstimate_(lines, estimateDate) {
       p.name,
       p.uom,
       qty,
-      p.cost,
+      cost,
       total,
       estimateDate,
       0
@@ -179,15 +181,9 @@ function ensureHistorySheets_() {
 
   let e = ss.getSheetByName(ESTIMATE_SHEET);
   if (!e) e = ss.insertSheet(ESTIMATE_SHEET);
-  if (e.getLastRow() === 0) {
-    e.getRange('A1:J1').setValues([[
-      'Reference','Saved At','Code','Product Name','UOM','QTY','Cost','Line Total','Estimate Date','Order Grand Total'
-    ]]);
-  } else {
-    e.getRange('A1:J1').setValues([[
-      'Reference','Saved At','Code','Product Name','UOM','QTY','Cost','Line Total','Estimate Date','Order Grand Total'
-    ]]);
-  }
+  e.getRange('A1:J1').setValues([[
+    'Reference','Saved At','Code','Product Name','UOM','QTY','Cost','Line Total','Estimate Date','Order Grand Total'
+  ]]);
   e.getRange('A1:J1').setFontWeight('bold').setBackground('#e5e7eb').setFontColor('#111827');
   e.setFrozenRows(1);
   e.getRange('G:H').setNumberFormat('#,##0.00');
