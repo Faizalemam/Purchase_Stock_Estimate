@@ -6,6 +6,11 @@ const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const LOGIN_WINDOW_SECONDS = 60;
 const MAX_LOGIN_FAILURES = 8;
 
+const EMAIL_FROM = 'inventory@blueskycoffe.com';
+const EMAIL_TO = 'Warehouse@blueskycoffe.com';
+const EMAIL_CC = 'saber@blueskycoffe.com,sm.1@blueskycoffe.com,m.osman@blueskycoffe.com';
+const EMAIL_SENDER_NAME = 'Blue Sky Est. for Beverages';
+
 const UOM_OVERRIDES = {
   '8001': 'CRT × 24 PCS',
   '8003': 'CRT × 24 PCS',
@@ -23,6 +28,7 @@ function setupProject() {
   setupSheets();
   applyUomOverridesToMaster_();
   ensureSecurityConfigured_();
+  ensureEmailAliasConfigured_();
   return 'Setup complete';
 }
 
@@ -34,13 +40,19 @@ function ensureSecurityConfigured_() {
   return true;
 }
 
+function ensureEmailAliasConfigured_() {
+  const aliases = GmailApp.getAliases().map(x => String(x).toLowerCase());
+  if (aliases.indexOf(EMAIL_FROM.toLowerCase()) === -1) {
+    throw new Error('Gmail alias not available: ' + EMAIL_FROM);
+  }
+  return true;
+}
+
 function doGet(e) {
   try {
     const action = String((e && e.parameter && e.parameter.action) || '');
 
-    if (action === 'health') {
-      return json_({ok:true, service:'Purchase Stock Estimate'});
-    }
+    if (action === 'health') return json_({ok:true, service:'Purchase Stock Estimate'});
 
     const token = String((e && e.parameter && e.parameter.token) || '');
     requireSession_(token);
@@ -83,6 +95,13 @@ function doPost(e) {
       return json_(saveEstimate_(lines, estimateDate));
     }
 
+    if (action === 'resendEstimate') {
+      const reference = String(e.parameter.reference || '').trim();
+      const orderData = getOrder_(reference);
+      const mail = sendEstimateEmail_(orderData.order, true);
+      return json_({ok:true, reference:reference, emailSent:true, messageId:mail.messageId || ''});
+    }
+
     return json_({ok:false,error:'Unknown action'});
   } catch (err) {
     return json_({ok:false,error:String(err.message || err)});
@@ -95,9 +114,7 @@ function login_(password, clientId) {
   const failKey = 'login-fail:' + clientId;
   const failures = Number(cache.get(failKey) || 0);
 
-  if (failures >= MAX_LOGIN_FAILURES) {
-    throw new Error('Too many failed login attempts. Please wait one minute and try again.');
-  }
+  if (failures >= MAX_LOGIN_FAILURES) throw new Error('Too many failed login attempts. Please wait one minute and try again.');
 
   const expected = PropertiesService.getScriptProperties().getProperty('APP_PASSWORD');
   if (!secureEquals_(password, expected)) {
@@ -166,7 +183,6 @@ function getOrders_(params) {
   const limit = Math.max(1, Math.min(500, Number.isFinite(requestedLimit) ? requestedLimit : 200));
   const dateFilter = String(params.date || '').trim();
   const refFilter = String(params.reference || '').trim().toUpperCase();
-
   const values = sh.getRange(2, 1, sh.getLastRow() - 1, 5).getValues();
   const orders = [];
 
@@ -186,7 +202,6 @@ function getOrders_(params) {
       grandTotal:Number(r[4] || 0)
     });
   }
-
   return {ok:true, orders:orders};
 }
 
@@ -199,8 +214,9 @@ function getOrder_(reference) {
   if (!detailSh || detailSh.getLastRow() < 2) throw new Error('No estimate history found.');
 
   const tz = Session.getScriptTimeZone() || 'Asia/Riyadh';
-  const range = detailSh.getRange(2, 1, detailSh.getLastRow() - 1, 10);
-  const matches = range.getValues().filter(r => String(r[0] || '').trim() === reference);
+  const matches = detailSh.getRange(2, 1, detailSh.getLastRow() - 1, 10).getValues()
+    .filter(r => String(r[0] || '').trim() === reference);
+
   if (!matches.length) throw new Error('Order not found.');
 
   const first = matches[0];
@@ -213,16 +229,13 @@ function getOrder_(reference) {
     total:Number(r[7] || 0)
   }));
 
-  return {
-    ok:true,
-    order:{
-      reference:reference,
-      savedAt:normalizeSheetDate_(first[1], tz, 'yyyy-MM-dd HH:mm:ss'),
-      estimateDate:normalizeSheetDate_(first[8], tz, 'yyyy-MM-dd'),
-      grandTotal:Number(first[9] || lines.reduce((s,x)=>s+x.total,0)),
-      lines:lines
-    }
-  };
+  return {ok:true, order:{
+    reference:reference,
+    savedAt:normalizeSheetDate_(first[1], tz, 'yyyy-MM-dd HH:mm:ss'),
+    estimateDate:normalizeSheetDate_(first[8], tz, 'yyyy-MM-dd'),
+    grandTotal:Number(first[9] || lines.reduce((s,x)=>s+x.total,0)),
+    lines:lines
+  }};
 }
 
 function normalizeSheetDate_(value, tz, pattern) {
@@ -316,7 +329,119 @@ function saveEstimate_(lines, estimateDate) {
     lock.releaseLock();
   }
 
-  return {ok:true, reference:reference, estimateDate:estimateDate, grandTotal:grandTotal, lines:validLines, masterCostsUpdated:Object.keys(masterUpdatesByRow).length};
+  const order = {
+    reference:reference,
+    savedAt:Utilities.formatDate(now, tz, 'yyyy-MM-dd HH:mm:ss'),
+    estimateDate:estimateDate,
+    grandTotal:grandTotal,
+    lines:rows.map(r => ({code:r[2], name:r[3], uom:r[4], qty:r[5], cost:r[6], total:r[7]}))
+  };
+
+  let emailSent = false;
+  let emailError = '';
+  try {
+    sendEstimateEmail_(order, false);
+    emailSent = true;
+  } catch (mailErr) {
+    emailError = String(mailErr.message || mailErr);
+  }
+
+  return {
+    ok:true,
+    reference:reference,
+    estimateDate:estimateDate,
+    grandTotal:grandTotal,
+    lines:validLines,
+    masterCostsUpdated:Object.keys(masterUpdatesByRow).length,
+    emailSent:emailSent,
+    emailError:emailError
+  };
+}
+
+function sendEstimateEmail_(order, isResend) {
+  ensureEmailAliasConfigured_();
+  const pdf = buildEstimatePdf_(order);
+  const subject = (isResend ? 'RESEND - ' : '') + 'Purchase Stock Estimate | ' + order.estimateDate + ' | ' + order.reference;
+  const html = buildEstimateEmailHtml_(order, isResend);
+  const plain = 'Purchase Stock Estimate\nReference: ' + order.reference + '\nDate: ' + order.estimateDate + '\nGrand Total: SAR ' + Number(order.grandTotal || 0).toFixed(2);
+
+  GmailApp.sendEmail(EMAIL_TO, subject, plain, {
+    from: EMAIL_FROM,
+    name: EMAIL_SENDER_NAME,
+    cc: EMAIL_CC,
+    htmlBody: html,
+    attachments: [pdf]
+  });
+
+  return {ok:true};
+}
+
+function buildEstimateEmailHtml_(order, isResend) {
+  const rows = order.lines.map((x, i) =>
+    '<tr>' +
+    '<td style="border:1px solid #d7dee8;padding:7px;text-align:center">' + (i + 1) + '</td>' +
+    '<td style="border:1px solid #d7dee8;padding:7px">' + htmlEscape_(x.code) + '</td>' +
+    '<td style="border:1px solid #d7dee8;padding:7px">' + htmlEscape_(x.name) + '</td>' +
+    '<td style="border:1px solid #d7dee8;padding:7px">' + htmlEscape_(x.uom) + '</td>' +
+    '<td style="border:1px solid #d7dee8;padding:7px;text-align:right">' + Number(x.qty || 0) + '</td>' +
+    '<td style="border:1px solid #d7dee8;padding:7px;text-align:right">' + Number(x.cost || 0).toFixed(2) + '</td>' +
+    '<td style="border:1px solid #d7dee8;padding:7px;text-align:right">' + Number(x.total || 0).toFixed(2) + '</td>' +
+    '</tr>'
+  ).join('');
+
+  return '<div style="font-family:Arial,sans-serif;color:#172334">' +
+    '<h2 style="color:#0f4c81">Blue Sky Est. for Beverages</h2>' +
+    '<h3>Purchase Stock Estimate' + (isResend ? ' - Resent Copy' : '') + '</h3>' +
+    '<p><b>Estimate Date:</b> ' + htmlEscape_(order.estimateDate) + '<br>' +
+    '<b>Reference:</b> ' + htmlEscape_(order.reference) + '<br>' +
+    '<b>Saved At:</b> ' + htmlEscape_(order.savedAt || '') + '</p>' +
+    '<table style="border-collapse:collapse;width:100%;font-size:13px">' +
+    '<thead><tr style="background:#0f4c81;color:white"><th>#</th><th>Code</th><th>Product Name</th><th>UOM</th><th>QTY</th><th>Cost</th><th>Total</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody></table>' +
+    '<p style="font-size:17px;text-align:right"><b>Grand Total: SAR ' + Number(order.grandTotal || 0).toFixed(2) + '</b></p>' +
+    '<p>PDF copy is attached.</p></div>';
+}
+
+function buildEstimatePdf_(order) {
+  const doc = DocumentApp.create('Purchase Stock Estimate - ' + order.reference);
+  const body = doc.getBody();
+  body.appendParagraph('BLUE SKY EST. FOR BEVERAGES').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+  body.appendParagraph('Purchase Stock Estimate').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  body.appendParagraph('Estimate Date: ' + order.estimateDate);
+  body.appendParagraph('Reference: ' + order.reference);
+  if (order.savedAt) body.appendParagraph('Saved At: ' + order.savedAt);
+  body.appendParagraph('');
+
+  const data = [['#','Code','Product Name','UOM','QTY','Cost','Total Amount']];
+  order.lines.forEach((x, i) => data.push([
+    String(i + 1),
+    String(x.code || ''),
+    String(x.name || ''),
+    String(x.uom || ''),
+    String(x.qty || 0),
+    Number(x.cost || 0).toFixed(2),
+    Number(x.total || 0).toFixed(2)
+  ]));
+
+  const table = body.appendTable(data);
+  table.getRow(0).editAsText().setBold(true);
+  body.appendParagraph('');
+  body.appendParagraph('Grand Total: SAR ' + Number(order.grandTotal || 0).toFixed(2)).setBold(true);
+  doc.saveAndClose();
+
+  const file = DriveApp.getFileById(doc.getId());
+  const pdf = file.getAs(MimeType.PDF).setName('Purchase_Stock_Estimate_' + order.reference + '.pdf');
+  file.setTrashed(true);
+  return pdf;
+}
+
+function htmlEscape_(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function applyUomOverridesToMaster_() {
