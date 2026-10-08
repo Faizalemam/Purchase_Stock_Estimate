@@ -1,11 +1,13 @@
 *{box-sizing:border-box}
 :root{font-family:Inter,Arial,sans-serif;color:#162334;background:#f4f7fb}
 body{margin:0}
+.hidden{display:none!important}
 .wrap{max-width:1200px;margin:24px auto;padding:0 14px}
 .card{background:white;border-radius:18px;box-shadow:0 8px 30px rgba(20,50,80,.09);padding:22px}
 .brand-banner{width:100%;display:flex;justify-content:center;align-items:center;padding:4px 0 18px;border-bottom:1px solid #edf1f5;margin-bottom:18px;overflow:hidden}
 .brand-banner img{display:block;width:100%;max-width:1000px;height:auto;object-fit:contain}
 .topbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.header-actions{display:flex;gap:10px;flex-wrap:wrap}
 h1{margin:0 0 6px;font-size:26px}p{margin:0;color:#65758b}
 .meta-row{display:flex;gap:12px;align-items:end;margin:16px 0 0}
 .field{display:flex;flex-direction:column;gap:6px;min-width:220px}
@@ -23,25 +25,40 @@ input:focus{outline:2px solid #9bc7ef;border-color:#5fa3df}
 .actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
 .actions.right{justify-content:flex-end}
 button{border:0;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.65;cursor:not-allowed}
 .primary{background:#0f4c81;color:white}
 .secondary{background:#e9f1f8;color:#173c5c}
 .danger{background:#fff0f0;color:#a52121;padding:8px 10px}
 .summary{margin:18px 0 0 auto;max-width:360px;display:flex;justify-content:space-between;align-items:center;background:#eef8ef;border:1px solid #d4ead8;padding:16px;border-radius:12px;font-size:18px}
 .summary strong{font-size:22px}
 .saved{margin-top:16px;background:#ecf8ef;color:#17652b;padding:13px;border-radius:10px}
-.hidden{display:none}
+
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#f4f7fb}
+.login-card{width:min(440px,100%);background:#fff;border-radius:18px;box-shadow:0 12px 40px rgba(20,50,80,.14);padding:28px}
+.login-brand{display:flex;justify-content:center;margin-bottom:22px;padding-bottom:16px;border-bottom:1px solid #edf1f5}
+.login-brand img{width:100%;max-width:360px;height:auto;display:block}
+.login-card h1{text-align:center;font-size:25px}
+.login-card>p{text-align:center;margin:0 0 22px;color:#65758b}
+.login-field{min-width:0;margin-bottom:14px}
+.login-btn{width:100%;padding:12px 16px;font-size:15px}
+.login-message{min-height:22px;margin-top:12px;text-align:center;color:#a52121;font-size:14px}
+
 @media(max-width:640px){
   .wrap{margin:0;padding:0}
   .card{border-radius:0;min-height:100vh;padding:14px}
   .brand-banner{padding:2px 0 12px;margin-bottom:14px}
   .brand-banner img{width:100%;max-width:none}
   .topbar{flex-direction:column}
+  .header-actions{width:100%}
+  .header-actions button{flex:1}
   .meta-row{display:block}
   .field{min-width:0}
   h1{font-size:22px}
   .summary{max-width:none}
   button{flex:1}
+  .login-card{padding:22px 18px}
 }
+
 @media print{
   body{background:white}.wrap{max-width:none;margin:0}.card{box-shadow:none}
   .actions,.status,.topbar button,.remove-col{display:none!important}
